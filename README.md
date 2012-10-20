@@ -20,12 +20,12 @@ The run command:
                     --match 'openstack|swift|compute' \
                     --nameserver 10.0.0.1 \
                     --no-host-key-verify \
+                    --threads 20 \                       # use up to 20 threads
                     puppet agent -t
 
 This will run the command 'puppet agent -t' on every node whose FQDN matches /openstack|swift|compute/ (regexp). It will try to resolve node names using DNS server 10.0.0.1 and use the IP address instead.
 Also, SSH host key verification also is disabled.
     
-
 # Copyright
 
 Copyright (c) 2012 Sergio Rubio. See LICENSE.txt for
