@@ -24,7 +24,7 @@ The run command:
                     puppet agent -t
 
 This will run the command 'puppet agent -t' on every node whose FQDN matches /openstack|swift|compute/ (regexp). It will try to resolve node names using DNS server 10.0.0.1 and use the IP address instead.
-Also, SSH host key verification also is disabled.
+Also, SSH host key verification has been disabled.
     
 # Copyright
 
