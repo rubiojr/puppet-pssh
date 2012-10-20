@@ -21,6 +21,7 @@ Jeweler::Tasks.new do |gem|
   gem.add_runtime_dependency 'json'
   gem.add_runtime_dependency 'clamp'
   gem.add_development_dependency 'rspec', '> 1.2.3'
+  gem.add_development_dependency 'jeweler'
 end
 Jeweler::RubygemsDotOrgTasks.new
 

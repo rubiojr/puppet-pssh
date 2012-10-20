@@ -102,6 +102,7 @@ module PuppetPSSH
 
       unless File.exist?(hostlist_path)
         Log.info "Generating hostlist..."
+        Log.debug "Hostlist path: #{hostlist_path}"
         # 
         # Optionally resolve names using specific DNS server
         #
@@ -125,7 +126,7 @@ module PuppetPSSH
           end
         end
       else
-        Log.info "Using cached hostlist in #{hostlist_path}"
+        Log.warn "Using cached hostlist in #{hostlist_path}"
       end
 
       $stdout.sync = true
@@ -137,7 +138,7 @@ module PuppetPSSH
         Log.warn 'Disabled host key verification'
         ssh_opts = '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
       end
-      system "#{pssh_path} -p 40 -o #{node_output_path} -t 300 -h /tmp/hostlist -x '#{ssh_opts}' " + "'#{command} 2>&1'"
+      system "#{pssh_path} -p 40 -o #{node_output_path} -t 300 -h #{hostlist_path} -x '#{ssh_opts}' " + "'#{command} 2>&1'"
     end
   end
 
