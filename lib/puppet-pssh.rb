@@ -84,6 +84,7 @@ module PuppetPSSH
     option ["-H", "--hostlist-path"], "HOSTLIST_PATH", "Save host list to path", :default => '/tmp/puppet-pssh-run-hostlist'
     option ["-o", "--node-output-path"], "NODE_OUTPUT_PATH", "Save host list to path", :default => '/tmp/'
     option "--[no-]host-key-verify", :flag, "Verify SSH host key", :default => true
+    option "--threads", "THREADS", "Use up to N threads", :default => 40
 
     def execute
       unless File.exist?(pssh_path)
@@ -133,12 +134,13 @@ module PuppetPSSH
       command = "sleep `echo $[ ( $RANDOM % 30 )  + 1 ]`;" + command_list.join(' ')
       Log.info "Node log output path: #{node_output_path}"
       Log.info "Running command '#{command}' with parallel-ssh..."
+      Log.info "Max threads: #{threads}"
       ssh_opts = ''
       unless host_key_verify?
         Log.warn 'Disabled host key verification'
         ssh_opts = '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
       end
-      system "#{pssh_path} -p 40 -o #{node_output_path} -t 300 -h #{hostlist_path} -x '#{ssh_opts}' " + "'#{command} 2>&1'"
+      system "#{pssh_path} -p #{threads} -o #{node_output_path} -t 300 -h #{hostlist_path} -x '#{ssh_opts}' " + "'#{command} 2>&1'"
     end
   end
 
