@@ -2,7 +2,7 @@
 
 Puppet parallel-ssh integration.
 
-Needs parallel-ssh installed (apt-get install pssh in Ubuntu/Debian).
+Needs parallel-ssh installed (apt-get install pssh on Ubuntu/Debian).
 
 # Install
 
