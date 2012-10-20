@@ -36,7 +36,7 @@ Clean node's /var/lib/puppet and revoke node cert on master also:
     puppet-pssh run 'curl -k -X PUT -H "Content-Type: text/pson" --data '\''{"desired_state":"revoked"}'\'' https://puppetmaster.devel.bvox.net:8140/development/certificate_status/`hostname -f`'
     puppet-pssh run 'curl -k -X DELETE -H "Accept: pson" https://puppetmaster.devel.bvox.net:8140/development/certificate_status/`hostname -f`'
 
-Your puppet master's auth.conf some rules for this to work. See:
+Your puppet master's auth.conf will need some rules for this to work. See:
 
 http://www.mail-archive.com/puppet-users@googlegroups.com/msg35412.html
 
