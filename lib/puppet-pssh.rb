@@ -17,7 +17,7 @@ module PuppetPSSH
       else
         severity = severity.red.bold if severity == 'ERROR'
         severity = severity.yellow.bold if severity == 'WARN'
-        "#{Time.now.to_i} #{severity}: #{msg}\n"
+        "*".bold.cyan + " #{severity}: #{msg}\n"
       end
     end
     Log.level = Logger::INFO unless (ENV["DEBUG"].eql? "yes" or ENV["DEBUG"].eql? 'true')
