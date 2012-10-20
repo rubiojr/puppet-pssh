@@ -49,10 +49,10 @@
 <p>The run command:</p>
 
 <pre><code>puppet-pssh run --puppetmaster 192.168.1.1 \ 
-                --match 'openstack|swift|compute' \
+                --match 'openstack-compute' \
                 --nameserver 10.0.0.1 \
                 --no-host-key-verify \
-                --threads 20 \                       # use up to 20 threads
+                --threads 20 \                # use up to 20 threads
                 puppet agent -t
 </code></pre>
 
