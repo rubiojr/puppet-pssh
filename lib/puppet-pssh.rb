@@ -87,8 +87,15 @@ module PuppetPSSH
     option "--threads", "THREADS", "Use up to N threads", :default => 40
     option "--cached-hostlist", :flag, "Use cached hostlist", :default => false
     option ["-s","--splay"], :flag, "Wait a random piece of time", :default => false
+    option ["-e","--extra-args"], "EXTRA_ARGS", "parallel-ssh extra arguments"
+    option ["-l","--user"], "USER", "SSH user (parallel-ssh -l argument)", :default => 'root'
 
     def execute
+
+      Log.info "SSH user: #{user}"
+      Log.info "Node log output path: #{node_output_path}"
+      Log.info "Max threads: #{threads}"
+
       unless File.exist?(pssh_path)
         Log.error "parallel-ssh command not found in #{pssh_path}."
         Log.error "Install it or use --pssh-path argument."
@@ -130,7 +137,7 @@ module PuppetPSSH
             unless nameserver.nil?
               address = res.query(i).answer.first.address rescue next
             end
-            f.puts "#{address} root"
+            f.puts "#{address}"
           end
         end
       else
@@ -144,15 +151,20 @@ module PuppetPSSH
       else
         command = command_list.join(' ')
       end
-      Log.info "Node log output path: #{node_output_path}"
       Log.info "Running command '#{command}' with parallel-ssh..."
-      Log.info "Max threads: #{threads}"
       ssh_opts = ''
+      extra_opts = "-l #{user} "
+      if extra_args
+        Log.info "Extra pssh arguments: #{extra_args}"
+        extra_opts << extra_args
+      end
       unless host_key_verify?
         Log.warn 'Disabled host key verification'
         ssh_opts = '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
       end
-      system "#{pssh_path} -p #{threads} -o #{node_output_path} -t 300 -h #{hostlist_path} -x '#{ssh_opts}' " + "'#{command} 2>&1'"
+      full_cmd = "#{pssh_path} #{extra_opts} -p #{threads} -o #{node_output_path} -t 300 -h #{hostlist_path} -x '#{ssh_opts}' " + "'#{command} 2>&1'"
+      Log.debug full_cmd
+      system full_cmd
     end
   end
 
