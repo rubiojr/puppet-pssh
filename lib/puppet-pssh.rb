@@ -7,7 +7,7 @@ require 'colored'
 
 module PuppetPSSH
 
-  VERSION = "0.1.1"
+  VERSION = "0.1.2"
 
   if !defined? Log or Log.nil?
     Log = Logger.new($stdout)
