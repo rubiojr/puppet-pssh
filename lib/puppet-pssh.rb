@@ -86,6 +86,7 @@ module PuppetPSSH
     option "--[no-]host-key-verify", :flag, "Verify SSH host key", :default => true
     option "--threads", "THREADS", "Use up to N threads", :default => 40
     option "--cached-hostlist", :flag, "Use cached hostlist", :default => false
+    option ["-s","--splay"], :flag, "Wait a random piece of time", :default => false
 
     def execute
       unless File.exist?(pssh_path)
@@ -137,7 +138,12 @@ module PuppetPSSH
       end
 
       $stdout.sync = true
-      command = "sleep `echo $[ ( $RANDOM % 30 )  + 1 ]`;" + command_list.join(' ')
+      if splay?
+        Log.info "Using 30s splay"
+        command = "sleep `echo $[ ( $RANDOM % 30 )  + 1 ]`;" + command_list.join(' ')
+      else
+        command = command_list.join(' ')
+      end
       Log.info "Node log output path: #{node_output_path}"
       Log.info "Running command '#{command}' with parallel-ssh..."
       Log.info "Max threads: #{threads}"
