@@ -52,6 +52,7 @@
                 --match 'openstack|swift|compute' \
                 --nameserver 10.0.0.1 \
                 --no-host-key-verify \
+                --threads 20 \                       # use up to 20 threads
                 puppet agent -t
 </code></pre>
 
