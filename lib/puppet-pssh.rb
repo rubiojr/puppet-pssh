@@ -85,6 +85,7 @@ module PuppetPSSH
     option ["-o", "--node-output-path"], "NODE_OUTPUT_PATH", "Save host list to path", :default => '/tmp/'
     option "--[no-]host-key-verify", :flag, "Verify SSH host key", :default => true
     option "--threads", "THREADS", "Use up to N threads", :default => 40
+    option "--cached-hostlist", :flag, "Use cached hostlist", :default => false
 
     def execute
       unless File.exist?(pssh_path)
@@ -99,6 +100,11 @@ module PuppetPSSH
       rescue => e
         Log.error e.message
         exit 1
+      end
+
+      # Delete previous hostlist unless specified otherwise
+      unless cached_hostlist?
+        File.delete hostlist_path if File.exist?(hostlist_path)
       end
 
       unless File.exist?(hostlist_path)
