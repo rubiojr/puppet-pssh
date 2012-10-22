@@ -67,6 +67,7 @@ module PuppetPSSH
     option ["-a", "--all-facts"], :flag, "Print node facts", :default => false
     option ["-f", "--fact"], "FACT", "Print fact value"
     option "--with-facts", "FACTS", "Comman separated list of facts to look for"
+    option "--status", :flag, "Print node status"
 
     def execute
       begin
@@ -91,6 +92,18 @@ module PuppetPSSH
                 break
               end
             end
+          elsif status?
+            puts n
+            status = JSON.parse(
+              Excon.get(master_url + "status/nodes/#{n}").body
+            )
+            puts "  #{'name:'.ljust(20).yellow} #{status['name']}"
+            puts "  #{'deactivated:'.ljust(20).yellow} " +
+                 "#{status['deactivated'] || 'no'}"
+            puts "  #{'catalog_timestamp:'.ljust(20).yellow} " + 
+                 "#{status['catalog_timestamp']}"
+            puts "  #{'facts_timestamp:'.ljust(20).yellow} " + 
+                 "#{status['facts_timestamp']}"
           else
             puts n 
           end
