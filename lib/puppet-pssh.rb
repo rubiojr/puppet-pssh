@@ -4,6 +4,7 @@ require 'excon'
 require 'json'
 require 'logger'
 require 'colored'
+require 'pp'
 
 module PuppetPSSH
 
@@ -29,10 +30,14 @@ module PuppetPSSH
     
     option ["-m", "--match"], "REGEX", "Only the nodes matching the regex", :default => '.*'
     option ["-p", "--puppetmaster"], "PUPPETMASTER", "Puppet master host", :default => 'puppet'
-    option "--puppetmaster-port", "PUPPETMASTER_PORT", "Puppet master port", :default => '8080'
+    option ["-P", "--puppetmaster-port"], "PUPPETMASTER_PORT", "Puppet master port", :default => '8080'
     option "--use-ssl", :flag, "Use SSL (https) to communicate with the puppetmaster", :default => false
     option "--debug", :flag, "Print debugging output", :default => false do |o|
       Log.level = Logger::DEBUG 
+    end
+
+    def master_url
+      "#{use_ssl? ? 'https' : 'http'}://#{puppetmaster}:#{puppetmaster_port}/"
     end
 
     def get_nodes(puppetmaster)
@@ -59,9 +64,37 @@ module PuppetPSSH
 
   class List < BaseCommand 
 
+    option ["-a", "--all-facts"], :flag, "Print node facts", :default => false
+    option ["-f", "--fact"], "FACT", "Print fact value"
+    option "--with-facts", "FACTS", "Comman separated list of facts to look for"
+
     def execute
       begin
-        get_nodes(puppetmaster).each { |n| puts n }
+        get_nodes(puppetmaster).each do |n| 
+          next unless n =~ /#{match}/
+          if all_facts?
+            pp JSON.parse(Excon.get(master_url + "facts/#{n}").body)
+          elsif fact
+            value = JSON.parse(
+              Excon.get(master_url + "facts/#{n}").body
+            )['facts'][fact] || 'fact_not_found'
+            puts n 
+            puts "  #{fact.yellow}: " + value
+          elsif with_facts
+            facts = JSON.parse(
+              Excon.get(master_url + "facts/#{n}").body
+            )['facts']
+            keys = facts.keys
+            with_facts.split(',').each do |f|
+              if keys.include?(f)
+                puts n
+                break
+              end
+            end
+          else
+            puts n 
+          end
+        end
       rescue Exception => e
         Log.error e.message
         exit 1
