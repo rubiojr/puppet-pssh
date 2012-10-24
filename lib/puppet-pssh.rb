@@ -27,7 +27,8 @@ module PuppetPSSH
 
 
   class BaseCommand < Clamp::Command
-    
+
+    option "--deactivated", :flag, "Include also deactivated nodes"
     option ["-m", "--match"], "REGEX", "Only the nodes matching the regex", :default => '.*'
     option ["-p", "--puppetmaster"], "PUPPETMASTER", "Puppet master host", :default => 'puppet'
     option ["-P", "--puppetmaster-port"], "PUPPETMASTER_PORT", "Puppet master port", :default => '8080'
@@ -40,15 +41,30 @@ module PuppetPSSH
       "#{use_ssl? ? 'https' : 'http'}://#{puppetmaster}:#{puppetmaster_port}/"
     end
 
+    def node_status(node)
+      @node_status ||= {}
+      @node_status[node]
+    end
+
     def get_nodes(puppetmaster)
       url = "#{use_ssl? ? 'https' : 'http'}://#{puppetmaster}:#{puppetmaster_port}/nodes"
       Log.debug "Puppet master host: #{puppetmaster}"
       Log.debug "Puppet master url: #{url}"
 
       nodes = []
+      @node_status = {}
       begin
         out = Excon.get url
         JSON.parse(out.body).each do |n| 
+          status = JSON.parse(
+            Excon.get(master_url + "status/nodes/#{n}").body
+          )
+          @node_status[n] = status
+          # Skip node if it has been deactivated
+          # and --deactivated isn't used
+          unless deactivated?
+            next if status['deactivated']
+          end
           next unless  n =~ /#{match}/
           nodes << n 
         end
@@ -94,9 +110,7 @@ module PuppetPSSH
             end
           elsif status?
             puts n
-            status = JSON.parse(
-              Excon.get(master_url + "status/nodes/#{n}").body
-            )
+            status = node_status(n)
             puts "  #{'name:'.ljust(20).yellow} #{status['name']}"
             puts "  #{'deactivated:'.ljust(20).yellow} " +
                  "#{status['deactivated'] || 'no'}"
