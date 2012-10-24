@@ -208,9 +208,14 @@ module PuppetPSSH
         Log.warn 'Disabled host key verification'
         ssh_opts = '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
       end
-      full_cmd = "#{pssh_path} #{extra_opts} -p #{threads} -o #{node_output_path} -t 300 -h #{hostlist_path} -x '#{ssh_opts}' " + "'#{command} 2>&1'"
-      Log.debug full_cmd
-      system full_cmd
+      if nodes.empty?
+        Log.warn 'The node list is empty.'
+        Log.warn 'If you are using --match, the regexp didn\'t match any node.'
+      else
+        full_cmd = "#{pssh_path} #{extra_opts} -p #{threads} -o #{node_output_path} -t 300 -h #{hostlist_path} -x '#{ssh_opts}' " + "'#{command} 2>&1'"
+        Log.debug full_cmd
+        system full_cmd
+      end
     end
   end
 
