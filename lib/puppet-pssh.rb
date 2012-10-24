@@ -8,7 +8,7 @@ require 'pp'
 
 module PuppetPSSH
 
-  VERSION = "0.2"
+  VERSION = "0.3"
 
   if !defined? Log or Log.nil?
     Log = Logger.new($stdout)
