@@ -4,11 +4,12 @@ require 'excon'
 require 'json'
 require 'logger'
 require 'colored'
+require 'uri'
 require 'pp'
 
 module PuppetPSSH
 
-  VERSION = "0.3"
+  VERSION = "0.3.1"
 
   if !defined? Log or Log.nil?
     Log = Logger.new($stdout)
@@ -42,31 +43,33 @@ module PuppetPSSH
     end
 
     def node_status(node)
-      @node_status ||= {}
-      @node_status[node]
+      JSON.parse(
+        Excon.get(master_url + "status/nodes/#{node}").body
+      )
     end
 
-    def get_nodes(puppetmaster)
-      url = "#{use_ssl? ? 'https' : 'http'}://#{puppetmaster}:#{puppetmaster_port}/nodes"
+    def get_nodes(puppetmaster, include_deactivated = false)
+      query = URI.encode '["=", ["node", "active"], true]'
+      url = "#{use_ssl? ? 'https' : 'http'}://#{puppetmaster}:#{puppetmaster_port}/nodes?query=#{query}"
       Log.debug "Puppet master host: #{puppetmaster}"
       Log.debug "Puppet master url: #{url}"
 
       nodes = []
-      @node_status = {}
       begin
         out = Excon.get url
         JSON.parse(out.body).each do |n| 
-          status = JSON.parse(
-            Excon.get(master_url + "status/nodes/#{n}").body
-          )
-          @node_status[n] = status
-          # Skip node if it has been deactivated
-          # and --deactivated isn't used
-          unless deactivated?
-            next if status['deactivated']
-          end
           next unless  n =~ /#{match}/
           nodes << n 
+        end
+        # IF --deactivated, include also deactivated nodes
+        if deactivated?
+          query = URI.encode '["=", ["node", "active"], false]'
+          url = "#{use_ssl? ? 'https' : 'http'}://#{puppetmaster}:#{puppetmaster_port}/nodes?query=#{query}"
+          out = Excon.get url
+          JSON.parse(out.body).each do |n| 
+            next unless  n =~ /#{match}/
+            nodes << n 
+          end
         end
       rescue TypeError => e
         raise Exception.new "Error retrieving node list from master host: #{puppetmaster}"
@@ -111,9 +114,13 @@ module PuppetPSSH
           elsif status?
             puts n
             status = node_status(n)
-            puts "  #{'name:'.ljust(20).yellow} #{status['name']}"
-            puts "  #{'deactivated:'.ljust(20).yellow} " +
-                 "#{status['deactivated'] || 'no'}"
+            puts "  #{'name:'.ljust(20).yellow} #{n}"
+            if status['deactivated']
+              puts "  #{'deactivated:'.ljust(20).yellow} " +
+                 "yes (#{status['deactivated']})"
+            else
+              puts "  #{'deactivated:'.ljust(20).yellow} no"
+            end
             puts "  #{'catalog_timestamp:'.ljust(20).yellow} " + 
                  "#{status['catalog_timestamp']}"
             puts "  #{'facts_timestamp:'.ljust(20).yellow} " + 
@@ -124,6 +131,7 @@ module PuppetPSSH
         end
       rescue Exception => e
         Log.error e.message
+        Log.debug e.backtrace
         exit 1
       end
     end
