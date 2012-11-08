@@ -11,6 +11,49 @@ module PuppetPSSH
 
   VERSION = "0.3.1"
 
+  class PuppetDB
+   
+    def initialize(host = 'puppet', port = '8080', use_ssl = false)
+      @host = host
+      @port = port
+      @use_ssl = use_ssl
+    end 
+    
+    def url 
+      "#{@use_ssl ? 'https' : 'http'}://#{@host}:#{@port}/"
+    end
+
+    def get_nodes_from_query(query)
+      target_url = "#{url}nodes?query=#{query}"
+      Log.debug "Puppet master host: #{@host}"
+      Log.debug "Puppet master url: #{target_url}"
+
+      nodes = []
+      begin
+        out = Excon.get target_url
+        JSON.parse(out.body).each do |n| 
+          nodes << n 
+        end
+      rescue TypeError => e
+        raise Exception.new "Error retrieving node list from master host: #{@host}"
+      rescue Excon::Errors::SocketError => e
+        raise Exception.new "Could not connect to the puppet master host: #{@host}"
+      end
+      nodes
+    end
+    
+    def deactivated_nodes
+      query = URI.encode '["=", ["node", "active"], false]'
+      get_nodes_from_query query
+    end
+
+    def active_nodes
+      query = URI.encode '["=", ["node", "active"], true]'
+      get_nodes_from_query query
+    end
+
+  end
+
   if !defined? Log or Log.nil?
     Log = Logger.new($stdout)
     Log.formatter = proc do |severity, datetime, progname, msg|
@@ -241,10 +284,31 @@ module PuppetPSSH
     end
   end
 
+  class CountNodes < Clamp::Command
+    option ["-p", "--puppetdb-host"], "PUPPETDB_HOST", "PuppetDB host",     :default => 'puppet'
+    option ["-P", "--puppetdb-port"], "PUPPETMASTER_PORT", "PuppetDB port", :default => '8080'
+    option "--debug", :flag, "Print debugging output", :default => false do |o|
+      Log.level = Logger::DEBUG 
+    end
+
+    def execute
+      pdb = PuppetDB.new puppetdb_host, puppetdb_port
+      active = pdb.active_nodes.size
+      deactivated = pdb.deactivated_nodes.size
+      total = active + deactivated
+      Log.info "Node population"
+      Log.info "Active nodes:   #{active}"
+      Log.info "Inactive nodes: #{deactivated}"
+      Log.info "Total:          #{total}"
+    end
+
+  end
+
   class Driver < Clamp::Command
 
     subcommand "run", "Run an arbitrary command against the nodes", Run
     subcommand "list", "List registered nodes", List 
+    subcommand "count-nodes", "Node population", CountNodes 
 
   end
 
