@@ -190,6 +190,7 @@ module PuppetPSSH
 
     parameter "COMMAND ...", "Command to run"
     option "--nameserver", "DNS_SERVER", "Resolve node name using the given nameserver"
+    option "--use-ipaddress-fact", :flag, "Use node's ipaddress fact as the target IP"
     option "--pssh-path", "PSSH_PATH", "Parallel-ssh command path", :default => '/usr/bin/parallel-ssh'
     option "--hostlist-path", "HOSTLIST_PATH", "Save host list to path", :default => '/tmp/puppet-pssh-run-hostlist'
     option ["-H", "--hostlist-path"], "HOSTLIST_PATH", "Save host list to path", :default => '/tmp/puppet-pssh-run-hostlist'
@@ -232,12 +233,14 @@ module PuppetPSSH
         # 
         # Optionally resolve names using specific DNS server
         #
-        unless nameserver.nil?
+        if !nameserver.nil?
           require 'net/dns'
           Log.info "DNS Server: #{nameserver}"
           Log.info "Resolving node names... (may take a while)"
           res = Net::DNS::Resolver.new
           res.nameservers = nameserver
+        elsif use_ipaddress_fact?
+          Log.info "Using node ipaddress fact to connect to the node..."
         end
         #
         File.open hostlist_path, 'w' do |f|
@@ -245,8 +248,19 @@ module PuppetPSSH
             address = i
             # try to resolve before writing the list
             Log.debug "Adding #{address}"
-            unless nameserver.nil?
+            if !nameserver.nil?
               address = res.query(i).answer.first.address rescue next
+            elsif use_ipaddress_fact?
+              value = JSON.parse(
+                Excon.get(master_url + "facts/#{i}").body
+              )['facts']['ipaddress']
+              if value
+                address = value
+              else
+                Log.warn "Node #{i} does not have ipaddress fact. Using FQDN."
+                address = i
+              end
+            else
             end
             f.puts "#{address}"
           end
